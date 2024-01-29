@@ -88,47 +88,51 @@ export class ConjugatorPage implements OnInit {
     }
   }
 
-  updateDisabled(pos,index: number){
+  updateDisabled(){
     /* 
     This function handles tasks relating to enabling and disabling available categories.
     Returns none
     */
 
-    let i = index + 1
-    this.disableLowerCat(i); // IMPORTANT: Disable must ALWAYS come before able, otherwise it will not enable the lower category
-    this.ableCat(i);
+    this.disableLowerCat(this.currentIndex); // IMPORTANT: Disable must ALWAYS come before able, otherwise it will not enable the lower category
+    this.ableCat(this.currentIndex);
   }
 
-  updatePath(pos, index:number, selected){
+  updatePath(selected){
     /*Function updates the path and the information for the follow category 
     pos is current cat
     index is the pos index
     selected is the selected option 
     */
-
-
     let prev_pos;
     let n;
+    let pos = this.information[this.currentIndex].name
 
-    if (index == 0){
+
+    if (this.currentIndex == 0){
       prev_pos = pos;
       let root = this.service.tree.getRoot();
       n = root.getChild(selected.id);
     } else{
-      prev_pos = this.information[index - 1].name;
+      prev_pos = this.information[this.currentIndex - 1].name;
       n = this.selectedPath[prev_pos].getChild(selected.id);
     }
     this.updateNodePath(n, pos);
-    this.currentIndex = index + 1;
-    if (index+1 >= this.information.length){
+
+    this.currentIndex += 1;
+    this.updateDisabled();
+
+    if (this.currentIndex >= this.information.length){
       this.Conjugate();
     }
     else{
-      this.updateInformation(index+1, pos);
+      this.updateInformation(this.currentIndex, pos);
+      selected = this.skipSingleItemCat()
+      if (selected){
+        this.updatePath(selected);
+      }
     }
-    
   }
-
 
   ableCat(index: number){
     /*
@@ -192,6 +196,19 @@ export class ConjugatorPage implements OnInit {
     this.myFunInformation$.next(this.information);
   }
 
+
+  skipSingleItemCat(){
+    let id = this.information[this.currentIndex].name;
+    if (this.information[this.currentIndex].cat.length == 1){
+      let tempinfo = this.information[this.currentIndex].cat[0]
+      this.selectedOptions[id].translation = tempinfo.translation;
+      this.selectedOptions[id].id = tempinfo.id;
+      this.selectedOptions[id].base = tempinfo.base;
+      return this.selectedOptions[id];
+    }
+    return false;
+  }
+
   Conjugate(){
     let canconjugate = true;
     Object.keys(this.selectedOptions).forEach(element => {
@@ -238,8 +255,6 @@ export class ConjugatorPage implements OnInit {
         'options':this.information[index].cat
       }
     });
-
-
     modal.onWillDismiss().then(dataReturned => {
       // trigger when about to close the modal
       if (dataReturned != null || dataReturned != undefined){
@@ -247,10 +262,9 @@ export class ConjugatorPage implements OnInit {
           this.selectedOptions[whichSearch].translation = dataReturned.data.translation;
           this.selectedOptions[whichSearch].id = dataReturned.data.id;
           this.selectedOptions[whichSearch].base = dataReturned.data.base;
-          this.updateDisabled(whichSearch,index);
-          this.updatePath(whichSearch,index, dataReturned.data);
-          // let id = this.information[index + 1].name;
-          // this.scroll(id);
+          // this.updateDisabled(whichSearch,index);
+          this.currentIndex = index;
+          this.updatePath(dataReturned.data);
         }
       }
     });
